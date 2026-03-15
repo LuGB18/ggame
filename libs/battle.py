@@ -1,45 +1,23 @@
 from .variables import BattleState
 from random import choice
-from os import system
 
 class BattleSystem:
     """
-    BattleSystem manages the logic and state transitions for a turn-based battle between a player and an enemy.
-    Attributes:
-        battle (BattleState): The current state of the battle.
-    Methods:
-        new_battle():
-            Initializes a new battle by creating a new BattleState instance.
-        use_potion(who):
-            Uses a potion for the specified participant ('pl' for player, 'en' for enemy).
-            Decreases the potion count and heals the participant by a fixed amount.
-            Returns the updated health value.
-        cur_stats(who) -> tuple:
-            Returns a tuple containing the current health and potion count for the specified participant.
-        all_stats() -> tuple:
-            Returns a tuple with all relevant stats for both player and enemy, including attack, defense, health, and potions.
-        defend(who):
-            Simulates a defend action for the specified participant.
-            Randomly determines if the defense is successful, temporarily reduces the opponent's attack, and applies damage.
-            Returns a tuple (defense_successful: bool, updated_health: int).
-        attack(who):
-            Applies an attack to the specified participant, reducing their health by the opponent's attack value.
-            Updates the battle state if a participant's health drops to zero or below.
-            Returns the updated health value.
-        next_round():
-            Switches the current round to the other participant.
-            Returns the identifier of the participant whose turn is next ('pl' or 'en').
+    BattleSystem gerencia a lógica e transições de estado para uma batalha por turnos entre jogador e inimigo.
     """
     battle : BattleState
 
     def new_battle(self):
+        # Inicializa um novo estado de batalha
         self.battle = BattleState()
 
     def use_potion(self, who):
+        # Usa uma poção para o jogador ('pl') ou inimigo ('en')
         match who:
             case 'pl':
                 if self.battle.POTIONS_PL >= 1:
                     self.battle.POTIONS_PL -= 1
+                    # Cura até o máximo de HP permitido
                     if self.battle.HL_PL+self.battle.POTION_HEAL_AMOUNT > self.battle.PLAYER_MAX_HP:
                         self.battle.HL_PL = self.battle.PLAYER_MAX_HP
                     else:
@@ -49,6 +27,7 @@ class BattleSystem:
             case 'en':
                 if self.battle.POTIONS_EN >= 1:
                     self.battle.POTIONS_EN -= 1
+                    # Cura até o máximo de HP permitido
                     if self.battle.HL_EN > self.battle.POTION_HEAL_AMOUNT:
                         self.battle.HL_EN = self.battle.ENEMY_MAX_HP
                     else:
@@ -56,6 +35,7 @@ class BattleSystem:
                     return self.battle.HL_EN
                     
     def cur_stats(self, who) -> tuple:
+        # Retorna HP e poções atuais do jogador ('pl') ou inimigo ('en')
         match who:
             case 'pl':
                 return (self.battle.HL_PL, self.battle.POTIONS_PL)
@@ -64,15 +44,18 @@ class BattleSystem:
         return (0,1)
 
     def all_stats(self) -> tuple:
+        # Retorna todos os atributos relevantes de ambos os lados
         return (self.battle.ATK_PL, self.battle.DEF_PL, self.battle.HL_PL, self.battle.POTIONS_PL, self.battle.ATK_EN, self.battle.DEF_EN, self.battle.HL_EN, self.battle.POTIONS_EN)
 
     def defend(self,who): 
+        # Simula ação de defesa para jogador ('pl') ou inimigo ('en')
+        # Retorna se defesa foi bem-sucedida e HP atualizado
         f_c = choice([True, False])
         match who:
             case 'pl':
                 if f_c:
                     old = self.battle.ATK_EN
-                    self.battle.ATK_EN -= self.battle.DEF_PL
+                    self.battle.ATK_EN -= self.battle.DEF_PL  # Reduz ataque do inimigo temporariamente
                     life = self.attack('pl')
                     self.battle.ATK_EN = old
                     return (True, life)
@@ -81,7 +64,7 @@ class BattleSystem:
             case 'en':
                 if f_c:
                     old = self.battle.ATK_PL
-                    self.battle.ATK_PL -= self.battle.DEF_EN
+                    self.battle.ATK_PL -= self.battle.DEF_EN  # Reduz ataque do jogador temporariamente
                     life = self.attack('en')
                     self.battle.ATK_PL = old
                     return (True, life)
@@ -91,6 +74,8 @@ class BattleSystem:
         
                     
     def attack(self, who):
+        # Aplica ataque ao jogador ('pl') ou inimigo ('en')
+        # Atualiza estado de vitória se HP chegar a zero
         match who:
             case 'pl':
                     self.battle.HL_PL -= self.battle.ATK_EN
@@ -106,6 +91,7 @@ class BattleSystem:
                     return self.battle.HL_EN
     
     def next_round(self):
+        # Alterna o turno entre jogador ('pl') e inimigo ('en')
         if self.battle.CUR_ROUND == 'pl':
             self.battle.CUR_ROUND = 'en'
             return 'en'

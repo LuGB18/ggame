@@ -1,34 +1,16 @@
-from os import system
+import subprocess
 
 class UI_Renderer:
     """
     UI_Renderer is a class responsible for rendering the user interface of the game in the console.
-    Methods
-    -------
-    clean_screen():
-        Clears the console screen.
-    main_menu():
-        Displays the main menu options to the player.
-    showmods(mods):
-        Displays the list of loaded mods.
-    menu_battle(stats_pl: tuple, stats_en: tuple):
-        Shows the battle menu with player and enemy stats.
-    show_defend(who, defended: bool):
-        Displays the result of a defend action for the player or enemy.
-    used_potion(who):
-        Shows a message indicating that a potion was used by the player or enemy.
-    show_action(who, action):
-        Displays the action taken by the player or enemy.
-    show_win(who):
-        Shows a message indicating the winner of the battle.
-    show_attack(who, DMG: int):
-        Displays the damage dealt by the player or enemy during an attack.
     """
 
     def clean_screen(self):
-        system('cls')
+        # Limpa a tela do console.
+        subprocess.run('cls', shell=True)
 
     def main_menu(self):
+        # Exibe o menu principal do jogo.
         print('''
     ----------------------------
     -        Bem Vindo!        -
@@ -40,6 +22,7 @@ class UI_Renderer:
               ''')
         
     def showmods(self, mods):
+        # Mostra a lista de mods carregados.
         i = 1
         stats = f'- MODS CARREGADOS: {len(mods)} -'
         print('-' * len(stats))
@@ -50,6 +33,7 @@ class UI_Renderer:
         print(f'\n')
 
     def menu_battle(self, stats_pl:tuple, stats_en:tuple):
+        # Exibe o menu de batalha com os status do jogador e do inimigo.
         stats = f'- STATS: Player(Vida:{stats_pl[0]}, Poções:{stats_pl[1]}), Inimigo(Vida:{stats_en[0]}, Poções:{stats_en[1]}) -'
         print('-' * len(stats))
         print(stats)
@@ -60,6 +44,7 @@ class UI_Renderer:
     3 - Usar Poção (Recupera 50 de Vida)''')
         
     def show_defend(self, who, defended:bool):
+        # Mostra o resultado da ação de defesa do jogador ou inimigo.
         match who:
             case 'pl':
                 stats = '- Você conseguiu se defender, e sofreu menos dano! -' if defended else '- Aw.. Não conseguiu defender, sofreu dano normal. -'
@@ -70,6 +55,7 @@ class UI_Renderer:
         print('-' * len(stats) + f'\n')
     
     def used_potion(self, who):
+        # Mostra mensagem quando uma poção é usada.
         match who:
             case 'pl':
                 stats = '- Você usou uma poção e recuperou vida. -'
@@ -80,6 +66,7 @@ class UI_Renderer:
         print('-' * len(stats) + f'\n')
 
     def show_action(self, who, action):
+        # Mostra qual ação foi realizada pelo jogador ou inimigo.
         match who:
             case 'pl':
                 match action:
@@ -102,6 +89,7 @@ class UI_Renderer:
         print('-' * len(stats) + f'\n')
     
     def show_win(self, who):
+        # Mostra quem venceu a batalha.
         match who:
             case 'pl':
                 stats = '- Você Ganhou! -'
@@ -112,6 +100,7 @@ class UI_Renderer:
         print('-' * len(stats) + f'\n')
 
     def show_attack(self, who, DMG:int):
+        # Mostra o dano causado por um ataque do jogador ou inimigo.
         match who:
             case 'pl':
                 stats = f'- Você atacou e infrigiu:{DMG} de Dano! -'

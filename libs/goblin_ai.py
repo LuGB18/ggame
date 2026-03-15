@@ -21,14 +21,19 @@ class Goblin:
     LOCAL_HEALTH : int
 
     def __init__(self, stats:tuple) -> None:
+        # Inicializa a vida e poções do goblin a partir de uma tupla de status
         self.LOCAL_HEALTH = stats[0]
         self.LOCAL_POTIONS = stats[1]
 
     def upd_stats(self, stats:tuple):
+        # Atualiza a vida e poções do goblin com novos valores da tupla de status
         self.LOCAL_HEALTH = stats[0]
         self.LOCAL_POTIONS = stats[1]
 
     def mk_choice(self):
+        # Decide a próxima ação do goblin:
+        # Usa uma poção se a vida estiver baixa e houver poções disponíveis,
+        # caso contrário, escolhe aleatoriamente entre atacar ou defender.
         if self.LOCAL_HEALTH < 25 and self.LOCAL_POTIONS >= 1:
             return 'potion'
         else:
