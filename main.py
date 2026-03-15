@@ -83,16 +83,18 @@ def render():
     while True:
         UI.clean_screen()  # Limpa tela
         UI.main_menu()  # Mostra menu principal
-        uin = int(input())  # Lê opção do usuário
-        match uin:
-            case 1:
-                batalha()  # Inicia batalha
-            case 2:
-                UI.showmods(loader.LOADED_MODS)  # Mostra mods carregados
-                input('Pressione qualquer tecla para voltar ao menu')
-            case 3:
-                exit()  # Sai do jogo
-
+        try:
+            uin = int(input())  # Lê opção do usuário
+            match uin:
+                case 1:
+                    batalha()  # Inicia batalha
+                case 2:
+                    UI.showmods(loader.LOADED_MODS)  # Mostra mods carregados
+                    input('Pressione qualquer tecla para voltar ao menu')
+                case 3:
+                    exit()  # Sai do jogo
+        except ValueError:
+            pass
 if __name__ == '__main__':
     loader.load_mods()  # Carrega mods
     BS = BattleSystem()  # Instancia sistema de batalha
