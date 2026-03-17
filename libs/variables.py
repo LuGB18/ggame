@@ -1,3 +1,5 @@
+from .log import log
+
 class BattleState:
     """
     Represents the state of a battle, including player and enemy stats, potion counts, health values, and game rules.
