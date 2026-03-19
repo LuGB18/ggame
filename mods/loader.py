@@ -9,7 +9,6 @@ import importlib
 import importlib.util
 from collections import defaultdict
 from pathlib import Path
-from types import ModuleType
 from typing import Any, Callable
 
 from mods.manifest import DEFAULT_GAME_VERSION, DEFAULT_LOADER_VERSION, ModCandidate, build_manifest, is_version_compatible
@@ -167,6 +166,7 @@ def reset_registry():
     PATCH_REPORT.clear()
     HOOKS.clear()
     _ORIGINAL_TARGETS.clear()
+    HOOKS.clear()
 
 
 def register_hook(event_name: str, callback: Callable[[dict[str, Any]], None]):
@@ -186,20 +186,20 @@ def _resolve_owner_and_attribute(target: str):
     for index in range(len(path_parts) - 1, 0, -1):
         module_name = '.'.join(path_parts[:index])
         try:
-            owner = importlib.import_module(module_name)
-            remaining_parts = path_parts[index:]
+            owner = __import__(module_name, fromlist=['*'])
+            remaining = parts[index:]
             break
         except ModuleNotFoundError:
             continue
     else:
         raise ValueError(f'Não foi possível importar o alvo: {target}')
 
-    for part in remaining_parts[:-1]:
+    for part in remaining[:-1]:
         if not hasattr(owner, part):
             raise ValueError(f'Atributo intermediário não encontrado em {target}: {part}')
         owner = getattr(owner, part)
 
-    attribute_name = remaining_parts[-1]
+    attribute_name = remaining[-1]
     if not hasattr(owner, attribute_name):
         raise ValueError(f'Atributo final não encontrado em {target}: {attribute_name}')
     return owner, attribute_name
@@ -354,6 +354,9 @@ def trigger_hooks(event_name: str, payload: dict[str, Any] | None = None):
     for hook in HOOKS.get(event_name, []):
         hook(event_payload)
 
+def load_mods(game_context: dict[str, Any] | None = None):
+    candidates: list[ModCandidate] = []
+    reset_registry()
 
 def load_mods(game_context: dict[str, Any]):
     """

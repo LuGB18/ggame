@@ -10,9 +10,21 @@ from mods import loader
 class PatchRegistryTests(unittest.TestCase):
     def setUp(self):
         loader.reset_registry()
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.mods_path = Path(self.temp_dir.name)
+        self.original_folder = loader.MODS_FOLDER
+        self.original_game_version = loader.GAME_VERSION
+        self.original_loader_version = loader.LOADER_VERSION
+        loader.MODS_FOLDER = self.mods_path
+        loader.GAME_VERSION = '1.0.0'
+        loader.LOADER_VERSION = '1.0.0'
 
     def tearDown(self):
+        loader.MODS_FOLDER = self.original_folder
+        loader.GAME_VERSION = self.original_game_version
+        loader.LOADER_VERSION = self.original_loader_version
         loader.reset_registry()
+        self.temp_dir.cleanup()
 
     def test_before_and_after_patches_follow_deterministic_order(self):
         battle = BattleSystem()
