@@ -1,5 +1,6 @@
 from .variables import BattleState
 from random import choice
+from mods import loader
 
 _PLAYER = 'pl'
 _ENEMY = 'en'
@@ -141,6 +142,9 @@ class BattleSystem:
 
     def use_potion(self, who):
         # Usa uma poção para o jogador ('pl') ou inimigo ('en')
+        event_payload = {'battle_system': self, 'who': who}
+        loader.trigger_hooks('battle.use_potion.before', event_payload)
+        result = None
         match who:
             case 'pl':
                 if self.battle.POTIONS_PL >= 1:
@@ -150,6 +154,7 @@ class BattleSystem:
                         self.battle.HL_PL = self.battle.PLAYER_MAX_HP
                     else:
                         self.battle.HL_PL += self.battle.POTION_HEAL_AMOUNT
+                    result = self.battle.HL_PL
                     self.mod_context.run_battle_rules('after_use_potion', battle_system=self, side=who)
                     return self.battle.HL_PL
 
@@ -161,6 +166,9 @@ class BattleSystem:
                         self.battle.HL_EN = self.battle.ENEMY_MAX_HP
                     else:
                         self.battle.HL_EN += self.battle.POTION_HEAL_AMOUNT
+                    result = self.battle.HL_EN
+        loader.trigger_hooks('battle.use_potion.after', {**event_payload, 'result': result})
+        return result
                     self.mod_context.run_battle_rules('after_use_potion', battle_system=self, side=who)
                     return self.battle.HL_EN
 
@@ -180,7 +188,10 @@ class BattleSystem:
     def defend(self,who):
         # Simula ação de defesa para jogador ('pl') ou inimigo ('en')
         # Retorna se defesa foi bem-sucedida e HP atualizado
+        event_payload = {'battle_system': self, 'who': who}
+        loader.trigger_hooks('battle.defend.before', event_payload)
         f_c = choice([True, False])
+        result = (True, 0)
         match who:
             case 'pl':
                 if f_c:
@@ -188,6 +199,9 @@ class BattleSystem:
                     self.battle.ATK_EN -= self.battle.DEF_PL  # Reduz ataque do inimigo temporariamente
                     life = self.attack('pl')
                     self.battle.ATK_EN = old
+                    result = (True, life)
+                else:
+                    result = (False, self.attack('pl'))
                     self.mod_context.run_battle_rules('after_defend', battle_system=self, side=who, success=True, remaining_health=life)
                     return (True, life)
                 else:
@@ -200,6 +214,11 @@ class BattleSystem:
                     self.battle.ATK_PL -= self.battle.DEF_EN  # Reduz ataque do jogador temporariamente
                     life = self.attack('en')
                     self.battle.ATK_PL = old
+                    result = (True, life)
+                else:
+                    result = (False, self.attack('en'))
+        loader.trigger_hooks('battle.defend.after', {**event_payload, 'result': result})
+        return result
                     self.mod_context.run_battle_rules('after_defend', battle_system=self, side=who, success=True, remaining_health=life)
                     return (True, life)
                 else:
@@ -212,6 +231,9 @@ class BattleSystem:
     def attack(self, who):
         # Aplica ataque ao jogador ('pl') ou inimigo ('en')
         # Atualiza estado de vitória se HP chegar a zero
+        event_payload = {'battle_system': self, 'who': who}
+        loader.trigger_hooks('battle.attack.before', event_payload)
+        result = None
         self.mod_context.run_battle_rules('before_attack', battle_system=self, target=who)
         match who:
             case 'pl':
@@ -219,6 +241,7 @@ class BattleSystem:
                     if self.battle.HL_PL <= 0:
                         self.battle.IS_WON = True
                         self.battle.WHO_WON = 'en'
+                    result = self.battle.HL_PL
                     self.mod_context.run_battle_rules('after_attack', battle_system=self, target=who, remaining_health=self.battle.HL_PL)
                     return self.battle.HL_PL
             case 'en':
@@ -226,6 +249,9 @@ class BattleSystem:
                     if self.battle.HL_EN <= 0:
                         self.battle.IS_WON = True
                         self.battle.WHO_WON = 'pl'
+                    result = self.battle.HL_EN
+        loader.trigger_hooks('battle.attack.after', {**event_payload, 'result': result})
+        return result
                     self.mod_context.run_battle_rules('after_attack', battle_system=self, target=who, remaining_health=self.battle.HL_EN)
                     return self.battle.HL_EN
 

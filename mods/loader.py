@@ -1,4 +1,7 @@
 import importlib.util
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any, Callable
 from collections import defaultdict
 import inspect
 from dataclasses import dataclass
@@ -296,6 +299,7 @@ class ModLoader:
 DEFAULT_LOADER = ModLoader()
 # Dicionário para armazenar mods carregados com sucesso
 LOADED_MODS = {}
+HOOKS: dict[str, list[Callable[[dict[str, Any]], None]]] = {}
 FAILED_MODS = {}
 GAME_VERSION = DEFAULT_GAME_VERSION
 LOADER_VERSION = DEFAULT_LOADER_VERSION
@@ -316,7 +320,48 @@ def _apply_mod(module):
     module.apply(MOD_CONTEXT)
 
 
-def load_mods():
+
+@dataclass
+class ModContext:
+    battle_system: Any
+    ui_renderer: Any
+    goblin_class: Any
+    shared_state: dict[str, Any] = field(default_factory=dict)
+    modules: dict[str, Any] = field(default_factory=dict)
+
+    def register_hook(self, event_name: str, callback: Callable[[dict[str, Any]], None]):
+        register_hook(event_name, callback)
+
+    def emit(self, event_name: str, payload: dict[str, Any] | None = None):
+        trigger_hooks(event_name, payload or {})
+
+
+def build_mod_context(game_context: dict[str, Any]) -> ModContext:
+    modules = dict(game_context.get('modules', {}))
+    for module_name in ('main_module', 'battle_module', 'ui_module', 'loader_module'):
+        if module_name in game_context:
+            modules[module_name] = game_context[module_name]
+
+    return ModContext(
+        battle_system=game_context.get('battle_system'),
+        ui_renderer=game_context.get('ui_renderer'),
+        goblin_class=game_context.get('goblin_class'),
+        shared_state=game_context.setdefault('shared_state', {}),
+        modules=modules,
+    )
+
+
+def register_hook(event_name: str, callback: Callable[[dict[str, Any]], None]):
+    HOOKS.setdefault(event_name, []).append(callback)
+
+
+def trigger_hooks(event_name: str, payload: dict[str, Any] | None = None):
+    event_payload = payload or {}
+    for hook in HOOKS.get(event_name, []):
+        hook(event_payload)
+
+
+def load_mods(game_context: dict[str, Any]):
     """
     Carrega, valida e aplica mods encontrados na pasta MODS_FOLDER.
     - Procura por pacotes (diretórios com __init__.py) e arquivos .py individuais.
@@ -325,6 +370,8 @@ def load_mods():
     - Ordena mods por dependências e prioridade antes de aplicar.
     - Armazena mods aplicados em LOADED_MODS e falhas em FAILED_MODS.
     """
+    mods_to_apply = []
+    mod_context = build_mod_context(game_context)
     LOADED_MODS.clear()
     FAILED_MODS.clear()
 
@@ -370,6 +417,7 @@ def unpatch_all(mod_name: str) -> int:
     for candidate in ordered_candidates:
         manifest = candidate.manifest
         try:
+            module.apply(mod_context)  # Executa a função principal do mod
             getattr(candidate.module, manifest.entrypoint)()
             LOADED_MODS[manifest.id] = {
                 "name": manifest.name,
@@ -571,6 +619,10 @@ def _register_failure(mod_id, mod_name, source_path, reason):
     print(f"Falha no mod {mod_name} ({mod_id}): {reason}")
             _apply_mod(module)  # Executa a função principal do mod
             LOADED_MODS[mod_name] = module  # Armazena o mod carregado
+            print(f"Mod carregado: {mod_name} - prioridade {priority}")
+        except TypeError:
+            module.apply()
+            LOADED_MODS[mod_name] = module
             print(f"Mod carregado: {mod_name} - prioridade {priority}")
         except Exception as e:
             print(f"Erro ao aplicar mod {mod_name}: {e}")
