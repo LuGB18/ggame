@@ -74,8 +74,8 @@ Você pode criar mods de duas formas:
 ```python
 PRIORITY = 10  # Opcional, define a ordem de carregamento
 
-def apply():
-        print("Meu MOD foi aplicado!")
+def apply(ctx):
+        ctx.log("info", "Meu MOD foi aplicado!")
 ```
 
 #### Exemplo de MOD pacote:
@@ -91,14 +91,14 @@ MOD_INFO = {
         "PRIORITY": 5
 }
 
-def apply():
-        print("Meu MOD pacote foi aplicado!")
+def apply(ctx):
+        ctx.log("info", "Meu MOD pacote foi aplicado!")
 ```
 
 ### 2. Como Incorporar um MOD
 
 1. **Coloque seu arquivo `.py` ou pasta de mod dentro do diretório `mods/`.**
-2. **Implemente a função obrigatória `apply()`** (executada ao carregar o mod).
+2. **Implemente a função obrigatória `apply(ctx)`** (executada ao carregar o mod). Mods legados com `apply()` sem argumentos continuam funcionando temporariamente.
 3. **(Opcional) Defina a prioridade** usando `PRIORITY` (arquivo simples) ou `MOD_INFO["PRIORITY"]` (pacote).
 4. **Execute o jogo normalmente.** O sistema de mods irá carregar e aplicar todos os mods automaticamente.
 5. **Verifique os mods carregados** pelo menu "Mods" no jogo.
@@ -108,5 +108,5 @@ def apply():
 ## Observações
 
 - Mods podem alterar qualquer aspecto do jogo, desde que importem e modifiquem variáveis/funções desejadas.
-- Use a função `apply()` para aplicar mudanças ao jogo.
+- Use a função `apply(ctx)` para aplicar mudanças ao jogo e acessar hooks, patches, APIs exportadas e estatísticas compartilhadas.
 - Mods com prioridade menor são aplicados antes.
