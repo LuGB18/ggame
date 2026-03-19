@@ -94,6 +94,8 @@ def apply():
         conflict_policy="ignore",
         patch_fn=before_attack,
     )
+def apply(ctx):
+        ctx.log("info", "Meu MOD foi aplicado!")
 ```
 
 #### Exemplo de `replace` em cadeia explícita:
@@ -119,6 +121,8 @@ def apply():
         conflict_policy="chain",
         patch_fn=replace_attack,
     )
+def apply(ctx):
+        ctx.log("info", "Meu MOD pacote foi aplicado!")
 ```
 
 ### 2. Regras de Composição
@@ -136,6 +140,10 @@ def apply():
 3. **Registre patches via `register_patch(...)`**, informando mod, tipo, alvo, prioridade e política de conflito.
 4. **Execute o jogo normalmente.** O sistema de mods irá carregar, validar e compor todos os patches automaticamente.
 5. **Verifique os mods carregados** pelo menu "Mods", que agora também exibe patches ativos por alvo e falhas.
+2. **Implemente a função obrigatória `apply(ctx)`** (executada ao carregar o mod). Mods legados com `apply()` sem argumentos continuam funcionando temporariamente.
+3. **(Opcional) Defina a prioridade** usando `PRIORITY` (arquivo simples) ou `MOD_INFO["PRIORITY"]` (pacote).
+4. **Execute o jogo normalmente.** O sistema de mods irá carregar e aplicar todos os mods automaticamente.
+5. **Verifique os mods carregados** pelo menu "Mods" no jogo.
 
 ---
 
@@ -144,3 +152,6 @@ def apply():
 - Mods podem alterar qualquer aspecto do jogo, desde que apontem para alvos chamáveis via nome fully-qualified.
 - Patches `after` podem retornar um novo resultado; se retornarem `None`, o resultado anterior é preservado.
 - Use `conflict_policy="exclusive"` para `replace` isolado e `conflict_policy="chain"` quando o mod aceitar compor com `next_fn`.
+- Mods podem alterar qualquer aspecto do jogo, desde que importem e modifiquem variáveis/funções desejadas.
+- Use a função `apply(ctx)` para aplicar mudanças ao jogo e acessar hooks, patches, APIs exportadas e estatísticas compartilhadas.
+- Mods com prioridade menor são aplicados antes.
