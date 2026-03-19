@@ -5,6 +5,8 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any, Callable
 
+from libs.battle import MOD_CONTEXT
+
 # Define a pasta onde os mods estão localizados (mesmo diretório deste arquivo)
 MODS_FOLDER = Path(__file__).parent
 
@@ -292,6 +294,16 @@ EXPORTED_APIS = DEFAULT_LOADER.exported_apis
 
 
 def load_mods() -> dict[str, ModuleType]:
+
+def _apply_mod(module):
+    apply_signature = inspect.signature(module.apply)
+    if len(apply_signature.parameters) == 0:
+        module.apply()
+        return
+    module.apply(MOD_CONTEXT)
+
+
+def load_mods():
     """
     Carrega e aplica mods encontrados na pasta MODS_FOLDER.
     - Procura por pacotes (diretórios com __init__.py) e arquivos .py individuais.
@@ -305,3 +317,30 @@ def load_mods() -> dict[str, ModuleType]:
 
 def unpatch_all(mod_name: str) -> int:
     return DEFAULT_LOADER.unpatch_all(mod_name)
+        # Se for um arquivo Python (exceto __init__.py)
+        elif item.is_file() and item.suffix == ".py" and item.name != "__init__.py":
+            mod_name = item.stem
+            try:
+                # Cria especificação de importação para o arquivo
+                spec = importlib.util.spec_from_file_location(mod_name, item)
+                if spec and spec.loader:
+                    module = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(module)
+                    # Verifica se possui a função obrigatória
+                    if hasattr(module, "apply"):
+                        priority = getattr(module, "PRIORITY", 0)  # prioridade padrão 0
+                        mods_to_apply.append((priority, mod_name, module))
+            except Exception as e:
+                print(f"Erro no mod {mod_name}: {e}")
+
+    # Ordena mods pela prioridade (menor valor primeiro)
+    mods_to_apply.sort(key=lambda x: x[0])
+
+    # Aplica os mods na ordem de prioridade
+    for priority, mod_name, module in mods_to_apply:
+        try:
+            _apply_mod(module)  # Executa a função principal do mod
+            LOADED_MODS[mod_name] = module  # Armazena o mod carregado
+            print(f"Mod carregado: {mod_name} - prioridade {priority}")
+        except Exception as e:
+            print(f"Erro ao aplicar mod {mod_name}: {e}")
