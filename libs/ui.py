@@ -1,4 +1,5 @@
 import subprocess
+from mods import loader
 
 class UI_Renderer:
     """
@@ -11,6 +12,7 @@ class UI_Renderer:
 
     def main_menu(self):
         # Exibe o menu principal do jogo.
+        loader.trigger_hooks('ui.main_menu.before', {'ui_renderer': self})
         print('''
     ----------------------------
     -        Bem Vindo!        -
@@ -20,9 +22,11 @@ class UI_Renderer:
         2- Mods
         3- Sair
               ''')
+        loader.trigger_hooks('ui.main_menu.after', {'ui_renderer': self})
         
     def showmods(self, mods):
         # Mostra a lista de mods carregados.
+        loader.trigger_hooks('ui.showmods.before', {'ui_renderer': self, 'mods': mods})
         i = 1
         stats = f'- MODS CARREGADOS: {len(mods)} -'
         print('-' * len(stats))
@@ -31,9 +35,11 @@ class UI_Renderer:
         for mod in mods:
             print(f'{i} - {mod}')
         print(f'\n')
+        loader.trigger_hooks('ui.showmods.after', {'ui_renderer': self, 'mods': mods})
 
     def menu_battle(self, stats_pl:tuple, stats_en:tuple):
         # Exibe o menu de batalha com os status do jogador e do inimigo.
+        loader.trigger_hooks('ui.menu_battle.before', {'ui_renderer': self, 'stats_pl': stats_pl, 'stats_en': stats_en})
         stats = f'- STATS: Player(Vida:{stats_pl[0]}, Poções:{stats_pl[1]}), Inimigo(Vida:{stats_en[0]}, Poções:{stats_en[1]}) -'
         print('-' * len(stats))
         print(stats)
@@ -42,6 +48,7 @@ class UI_Renderer:
     1 - Atacar
     2 - Defender
     3 - Usar Poção (Recupera 50 de Vida)''')
+        loader.trigger_hooks('ui.menu_battle.after', {'ui_renderer': self, 'stats_pl': stats_pl, 'stats_en': stats_en})
         
     def show_defend(self, who, defended:bool):
         # Mostra o resultado da ação de defesa do jogador ou inimigo.
