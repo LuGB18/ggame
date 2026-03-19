@@ -25,6 +25,50 @@ class UI_Renderer:
         loader.trigger_hooks('ui.main_menu.after', {'ui_renderer': self})
 
     def showmods(self, mods, patch_report=None, failed_mods=None):
+        loader.trigger_hooks('ui.main_menu.after', {'ui_renderer': self})
+        
+    def showmods(self, report):
+        # Mostra a lista de mods carregados.
+        total = len(report.discovered_mods)
+        stats = f'- MODS DESCOBERTOS: {total} -'
+        print('-' * len(stats))
+        print(stats)
+        print('-' * len(stats))
+
+        if not total:
+            print('Nenhum mod encontrado.\n')
+            return
+
+        valid_names = {mod.name for mod in report.valid_mods}
+        loaded_names = {mod.name for mod in report.loaded_mods}
+        failed_lookup = {mod.name: mod for mod in report.failed_mods}
+        rejected_lookup = {mod.candidate.name: mod for mod in report.rejected_mods}
+        priority_lookup = {mod.name: mod.priority for mod in report.valid_mods}
+        version_lookup = {mod.name: mod.version for mod in report.valid_mods}
+
+        for i, candidate in enumerate(report.discovered_mods, start=1):
+            if candidate.name in loaded_names:
+                status = 'carregado'
+                reason = '-'
+            elif candidate.name in failed_lookup:
+                status = 'falhou ao aplicar'
+                reason = failed_lookup[candidate.name].failure_reason or '-'
+            elif candidate.name in rejected_lookup:
+                status = 'rejeitado'
+                reason = rejected_lookup[candidate.name].reason
+            elif candidate.name in valid_names:
+                status = 'válido'
+                reason = '-'
+            else:
+                status = 'desconhecido'
+                reason = '-'
+
+            priority = priority_lookup.get(candidate.name, '-')
+            version = version_lookup.get(candidate.name, 'desconhecida')
+            print(
+                f'{i} - {candidate.name} | status: {status} | versão: {version} '
+                f'| prioridade: {priority} | motivo: {reason}'
+            )
         loader.trigger_hooks('ui.showmods.before', {'ui_renderer': self, 'mods': mods})
         i = 1
         stats = f'- MODS CARREGADOS: {len(mods)} -'
