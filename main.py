@@ -98,7 +98,7 @@ def render():
                 case 1:
                     batalha()  # Inicia batalha
                 case 2:
-                    UI.showmods(loader.LOADED_MODS)  # Mostra mods carregados
+                    UI.showmods(loader.LOADED_MODS, loader.get_patch_report(), loader.FAILED_MODS)  # Mostra mods carregados
                     input('Pressione qualquer tecla para voltar ao menu')
                 case 3:
                     exit()  # Sai do jogo
