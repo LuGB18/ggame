@@ -1,10 +1,22 @@
 import importlib.util
+import inspect
 from pathlib import Path
+
+from libs.battle import MOD_CONTEXT
 
 # Define a pasta onde os mods estão localizados (mesmo diretório deste arquivo)
 MODS_FOLDER = Path(__file__).parent
 # Dicionário para armazenar mods carregados com sucesso
 LOADED_MODS = {}
+
+
+def _apply_mod(module):
+    apply_signature = inspect.signature(module.apply)
+    if len(apply_signature.parameters) == 0:
+        module.apply()
+        return
+    module.apply(MOD_CONTEXT)
+
 
 def load_mods():
     """
@@ -57,7 +69,7 @@ def load_mods():
     # Aplica os mods na ordem de prioridade
     for priority, mod_name, module in mods_to_apply:
         try:
-            module.apply()  # Executa a função principal do mod
+            _apply_mod(module)  # Executa a função principal do mod
             LOADED_MODS[mod_name] = module  # Armazena o mod carregado
             print(f"Mod carregado: {mod_name} - prioridade {priority}")
         except Exception as e:
