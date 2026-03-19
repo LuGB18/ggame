@@ -12,7 +12,6 @@ class UI_Renderer:
         os.system('cls' if os.name == 'nt' else 'clear')
 
     def main_menu(self):
-        # Exibe o menu principal do jogo.
         loader.trigger_hooks('ui.main_menu.before', {'ui_renderer': self})
         print('''
     ----------------------------
@@ -26,7 +25,50 @@ class UI_Renderer:
         loader.trigger_hooks('ui.main_menu.after', {'ui_renderer': self})
 
     def showmods(self, mods, patch_report=None, failed_mods=None):
+        loader.trigger_hooks('ui.main_menu.after', {'ui_renderer': self})
+        
+    def showmods(self, report):
         # Mostra a lista de mods carregados.
+        total = len(report.discovered_mods)
+        stats = f'- MODS DESCOBERTOS: {total} -'
+        print('-' * len(stats))
+        print(stats)
+        print('-' * len(stats))
+
+        if not total:
+            print('Nenhum mod encontrado.\n')
+            return
+
+        valid_names = {mod.name for mod in report.valid_mods}
+        loaded_names = {mod.name for mod in report.loaded_mods}
+        failed_lookup = {mod.name: mod for mod in report.failed_mods}
+        rejected_lookup = {mod.candidate.name: mod for mod in report.rejected_mods}
+        priority_lookup = {mod.name: mod.priority for mod in report.valid_mods}
+        version_lookup = {mod.name: mod.version for mod in report.valid_mods}
+
+        for i, candidate in enumerate(report.discovered_mods, start=1):
+            if candidate.name in loaded_names:
+                status = 'carregado'
+                reason = '-'
+            elif candidate.name in failed_lookup:
+                status = 'falhou ao aplicar'
+                reason = failed_lookup[candidate.name].failure_reason or '-'
+            elif candidate.name in rejected_lookup:
+                status = 'rejeitado'
+                reason = rejected_lookup[candidate.name].reason
+            elif candidate.name in valid_names:
+                status = 'válido'
+                reason = '-'
+            else:
+                status = 'desconhecido'
+                reason = '-'
+
+            priority = priority_lookup.get(candidate.name, '-')
+            version = version_lookup.get(candidate.name, 'desconhecida')
+            print(
+                f'{i} - {candidate.name} | status: {status} | versão: {version} '
+                f'| prioridade: {priority} | motivo: {reason}'
+            )
         loader.trigger_hooks('ui.showmods.before', {'ui_renderer': self, 'mods': mods})
         i = 1
         stats = f'- MODS CARREGADOS: {len(mods)} -'
@@ -73,12 +115,11 @@ class UI_Renderer:
         for mod_name, failures in failed_mods.items():
             print(f'* {mod_name}')
             for failure in failures:
-                print(f'  - alvo: {failure["target"]} | motivo: {failure["reason"]}')
+                print(f'  - alvo: {failure.get("target", failure.get("path", "?"))} | motivo: {failure["reason"]}')
         print('\n')
         loader.trigger_hooks('ui.showmods.after', {'ui_renderer': self, 'mods': mods})
 
     def menu_battle(self, stats_pl: tuple, stats_en: tuple):
-        # Exibe o menu de batalha com os status do jogador e do inimigo.
         loader.trigger_hooks('ui.menu_battle.before', {'ui_renderer': self, 'stats_pl': stats_pl, 'stats_en': stats_en})
         stats = f'- STATS: Player(Vida:{stats_pl[0]}, Poções:{stats_pl[1]}), Inimigo(Vida:{stats_en[0]}, Poções:{stats_en[1]}) -'
         print('-' * len(stats))
@@ -91,7 +132,6 @@ class UI_Renderer:
         loader.trigger_hooks('ui.menu_battle.after', {'ui_renderer': self, 'stats_pl': stats_pl, 'stats_en': stats_en})
 
     def show_defend(self, who, defended: bool):
-        # Mostra o resultado da ação de defesa do jogador ou inimigo.
         match who:
             case 'pl':
                 stats = '- Você conseguiu se defender, e sofreu menos dano! -' if defended else '- Aw.. Não conseguiu defender, sofreu dano normal. -'
