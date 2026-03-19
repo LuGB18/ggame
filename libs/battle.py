@@ -1,6 +1,8 @@
-from .variables import BattleState
 from random import choice
+
 from mods import loader
+
+from .variables import BattleState
 
 _PLAYER = 'pl'
 _ENEMY = 'en'
@@ -109,13 +111,13 @@ class BattleSystem:
     """
     BattleSystem gerencia a lógica e transições de estado para uma batalha por turnos entre jogador e inimigo.
     """
-    battle : BattleState
+
+    battle: BattleState
 
     def __init__(self, mod_context: ModContext | None = None) -> None:
         self.mod_context = mod_context or MOD_CONTEXT
 
     def new_battle(self):
-        # Inicializa um novo estado de batalha
         self.battle = self.mod_context.build_battle_state()
         self.mod_context.run_battle_rules('new_battle', battle_system=self)
 
@@ -141,127 +143,121 @@ class BattleSystem:
         self.mod_context.register_battle_rule(name, callback)
 
     def use_potion(self, who):
-        # Usa uma poção para o jogador ('pl') ou inimigo ('en')
         event_payload = {'battle_system': self, 'who': who}
         loader.trigger_hooks('battle.use_potion.before', event_payload)
-        result = None
-        match who:
-            case 'pl':
-                if self.battle.POTIONS_PL >= 1:
-                    self.battle.POTIONS_PL -= 1
-                    # Cura até o máximo de HP permitido
-                    if self.battle.HL_PL+self.battle.POTION_HEAL_AMOUNT > self.battle.PLAYER_MAX_HP:
-                        self.battle.HL_PL = self.battle.PLAYER_MAX_HP
-                    else:
-                        self.battle.HL_PL += self.battle.POTION_HEAL_AMOUNT
-                    result = self.battle.HL_PL
-                    self.mod_context.run_battle_rules('after_use_potion', battle_system=self, side=who)
-                    return self.battle.HL_PL
 
-            case 'en':
-                if self.battle.POTIONS_EN >= 1:
-                    self.battle.POTIONS_EN -= 1
-                    # Cura até o máximo de HP permitido
-                    if self.battle.HL_EN > self.battle.POTION_HEAL_AMOUNT:
-                        self.battle.HL_EN = self.battle.ENEMY_MAX_HP
-                    else:
-                        self.battle.HL_EN += self.battle.POTION_HEAL_AMOUNT
-                    result = self.battle.HL_EN
+        result = None
+        if who == _PLAYER and self.battle.POTIONS_PL >= 1:
+            self.battle.POTIONS_PL -= 1
+            self.battle.HL_PL = min(
+                self.battle.HL_PL + self.battle.POTION_HEAL_AMOUNT,
+                self.battle.PLAYER_MAX_HP,
+            )
+            result = self.battle.HL_PL
+        elif who == _ENEMY and self.battle.POTIONS_EN >= 1:
+            self.battle.POTIONS_EN -= 1
+            self.battle.HL_EN = min(
+                self.battle.HL_EN + self.battle.POTION_HEAL_AMOUNT,
+                self.battle.ENEMY_MAX_HP,
+            )
+            result = self.battle.HL_EN
+
+        if result is not None:
+            self.mod_context.run_battle_rules('after_use_potion', battle_system=self, side=who)
+
         loader.trigger_hooks('battle.use_potion.after', {**event_payload, 'result': result})
         return result
-                    self.mod_context.run_battle_rules('after_use_potion', battle_system=self, side=who)
-                    return self.battle.HL_EN
 
     def cur_stats(self, who) -> tuple:
-        # Retorna HP e poções atuais do jogador ('pl') ou inimigo ('en')
-        match who:
-            case 'pl':
-                return (self.battle.HL_PL, self.battle.POTIONS_PL)
-            case 'en':
-                return (self.battle.HL_EN, self.battle.POTIONS_EN)
-        return (0,1)
+        if who == _PLAYER:
+            return (self.battle.HL_PL, self.battle.POTIONS_PL)
+        if who == _ENEMY:
+            return (self.battle.HL_EN, self.battle.POTIONS_EN)
+        return (0, 1)
 
     def all_stats(self) -> tuple:
-        # Retorna todos os atributos relevantes de ambos os lados
-        return (self.battle.ATK_PL, self.battle.DEF_PL, self.battle.HL_PL, self.battle.POTIONS_PL, self.battle.ATK_EN, self.battle.DEF_EN, self.battle.HL_EN, self.battle.POTIONS_EN)
+        return (
+            self.battle.ATK_PL,
+            self.battle.DEF_PL,
+            self.battle.HL_PL,
+            self.battle.POTIONS_PL,
+            self.battle.ATK_EN,
+            self.battle.DEF_EN,
+            self.battle.HL_EN,
+            self.battle.POTIONS_EN,
+        )
 
-    def defend(self,who):
-        # Simula ação de defesa para jogador ('pl') ou inimigo ('en')
-        # Retorna se defesa foi bem-sucedida e HP atualizado
+    def defend(self, who):
         event_payload = {'battle_system': self, 'who': who}
         loader.trigger_hooks('battle.defend.before', event_payload)
-        f_c = choice([True, False])
-        result = (True, 0)
-        match who:
-            case 'pl':
-                if f_c:
-                    old = self.battle.ATK_EN
-                    self.battle.ATK_EN -= self.battle.DEF_PL  # Reduz ataque do inimigo temporariamente
-                    life = self.attack('pl')
-                    self.battle.ATK_EN = old
-                    result = (True, life)
-                else:
-                    result = (False, self.attack('pl'))
-                    self.mod_context.run_battle_rules('after_defend', battle_system=self, side=who, success=True, remaining_health=life)
-                    return (True, life)
-                else:
-                    life = self.attack('pl')
-                    self.mod_context.run_battle_rules('after_defend', battle_system=self, side=who, success=False, remaining_health=life)
-                    return (False, life)
-            case 'en':
-                if f_c:
-                    old = self.battle.ATK_PL
-                    self.battle.ATK_PL -= self.battle.DEF_EN  # Reduz ataque do jogador temporariamente
-                    life = self.attack('en')
-                    self.battle.ATK_PL = old
-                    result = (True, life)
-                else:
-                    result = (False, self.attack('en'))
+
+        defended = choice([True, False])
+        if who == _PLAYER:
+            attacker_field = 'ATK_EN'
+            defense_value = self.battle.DEF_PL
+        elif who == _ENEMY:
+            attacker_field = 'ATK_PL'
+            defense_value = self.battle.DEF_EN
+        else:
+            result = (False, 0)
+            loader.trigger_hooks('battle.defend.after', {**event_payload, 'result': result})
+            return result
+
+        original_attack = getattr(self.battle, attacker_field)
+        if defended:
+            setattr(self.battle, attacker_field, max(0, original_attack - defense_value))
+
+        life = self.attack(who)
+        setattr(self.battle, attacker_field, original_attack)
+
+        result = (defended, life)
+        self.mod_context.run_battle_rules(
+            'after_defend',
+            battle_system=self,
+            side=who,
+            success=defended,
+            remaining_health=life,
+        )
         loader.trigger_hooks('battle.defend.after', {**event_payload, 'result': result})
         return result
-                    self.mod_context.run_battle_rules('after_defend', battle_system=self, side=who, success=True, remaining_health=life)
-                    return (True, life)
-                else:
-                    life = self.attack('en')
-                    self.mod_context.run_battle_rules('after_defend', battle_system=self, side=who, success=False, remaining_health=life)
-                    return (False, life)
-        return (True, 0)
-
 
     def attack(self, who):
-        # Aplica ataque ao jogador ('pl') ou inimigo ('en')
-        # Atualiza estado de vitória se HP chegar a zero
         event_payload = {'battle_system': self, 'who': who}
         loader.trigger_hooks('battle.attack.before', event_payload)
-        result = None
         self.mod_context.run_battle_rules('before_attack', battle_system=self, target=who)
-        match who:
-            case 'pl':
-                    self.battle.HL_PL -= self.battle.ATK_EN
-                    if self.battle.HL_PL <= 0:
-                        self.battle.IS_WON = True
-                        self.battle.WHO_WON = 'en'
-                    result = self.battle.HL_PL
-                    self.mod_context.run_battle_rules('after_attack', battle_system=self, target=who, remaining_health=self.battle.HL_PL)
-                    return self.battle.HL_PL
-            case 'en':
-                    self.battle.HL_EN -= self.battle.ATK_PL
-                    if self.battle.HL_EN <= 0:
-                        self.battle.IS_WON = True
-                        self.battle.WHO_WON = 'pl'
-                    result = self.battle.HL_EN
+
+        if who == _PLAYER:
+            self.battle.HL_PL -= self.battle.ATK_EN
+            result = self.battle.HL_PL
+        elif who == _ENEMY:
+            self.battle.HL_EN -= self.battle.ATK_PL
+            result = self.battle.HL_EN
+        else:
+            result = None
+
+        if result is not None and result <= 0:
+            self.battle.IS_WON = True
+            self.battle.WHO_WON = _WINNER_BY_TARGET[who]
+
+        if result is not None:
+            self.mod_context.run_battle_rules(
+                'after_attack',
+                battle_system=self,
+                target=who,
+                remaining_health=result,
+            )
+
         loader.trigger_hooks('battle.attack.after', {**event_payload, 'result': result})
         return result
-                    self.mod_context.run_battle_rules('after_attack', battle_system=self, target=who, remaining_health=self.battle.HL_EN)
-                    return self.battle.HL_EN
 
     def next_round(self):
-        # Alterna o turno entre jogador ('pl') e inimigo ('en')
-        if self.battle.CUR_ROUND == 'pl':
-            self.battle.CUR_ROUND = 'en'
-            self.mod_context.run_battle_rules('after_round_change', battle_system=self, current_round='en')
-            return 'en'
+        if self.battle.CUR_ROUND == _PLAYER:
+            self.battle.CUR_ROUND = _ENEMY
         else:
-            self.battle.CUR_ROUND = 'pl'
-            self.mod_context.run_battle_rules('after_round_change', battle_system=self, current_round='pl')
-            return 'pl'
+            self.battle.CUR_ROUND = _PLAYER
+        self.mod_context.run_battle_rules(
+            'after_round_change',
+            battle_system=self,
+            current_round=self.battle.CUR_ROUND,
+        )
+        return self.battle.CUR_ROUND
